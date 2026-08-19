@@ -91,7 +91,10 @@ $('#pwBtn').addEventListener('click', () => {
 });
 
 /* ═════════════════════════════════════════════════════════ refresh ══ */
-async function refresh(quiet = false) {
+/* Counters only. Kept separate from refresh() so a view can update the
+   sidebar without asking refresh() to reload that same view — which is
+   exactly the loop that made the tickets tab thrash. */
+async function loadStats(quiet = true) {
   try {
     const s = await rpcAuth('tuna_support_stats');
     paintStats(s);
@@ -99,6 +102,10 @@ async function refresh(quiet = false) {
     if (e.expired) return signOut();
     if (!quiet) toast(e.message, 'bad');
   }
+}
+
+async function refresh(quiet = false) {
+  await loadStats(quiet);
   if (view === 'queue') await loadQueue(quiet);
   if (view === 'tickets') await loadTickets();
   if (view === 'canned') paintCanned();
@@ -219,6 +226,10 @@ async function openThread(id) {
           `<option ${r.category === s ? 'selected' : ''}>${s}</option>`).join('')}</select>
         <button class="btn btn--xs" id="tClaim">${r.assigned_to ? 'Unassign' : 'Assign to me'}</button>
         <button class="btn btn--gold btn--xs" id="tEsc">Raise ticket</button>
+        <button class="btn btn--win btn--xs" id="tSolve"
+          ${r.status === 'solved' || r.status === 'closed' ? 'disabled' : ''}>
+          ${r.status === 'solved' || r.status === 'closed' ? 'Already solved' : 'Mark solved'}
+        </button>
       </div>
     </div>
 
@@ -295,6 +306,7 @@ async function openThread(id) {
   $('#tClaim').addEventListener('click', () =>
     set({ p_assign: r.assigned_to ? 'none' : 'me' }).then(() => openThread(id)));
   $('#tEsc').addEventListener('click', () => escalateModal(id, p));
+  $('#tSolve').addEventListener('click', () => solveModal(id, p));
 
   $('#cannedPick').addEventListener('change', (e) => {
     const c = canned.find((x) => String(x.id) === e.target.value);
@@ -400,7 +412,43 @@ function escalateModal(reportId, p) {
       closeModal();
       toast(`Ticket #${out.id} sent to admin.`, 'good');
       openThread(reportId);
-      refresh(true);
+      loadStats();
+    } catch (ex) { err.textContent = ex.message; err.hidden = false; }
+  });
+}
+
+/* ─────────────────────────────────────────────── close a conversation ── */
+function solveModal(reportId, p) {
+  openModal(`
+    <h2>Mark solved</h2>
+    <p class="sub">Closes this chat for ${esc(p.name)}.</p>
+    <div class="alert alert--bad" id="svErr" hidden></div>
+
+    <div class="alert alert--info">
+      The player is told it is closed. If they reply again the chat reopens
+      by itself and comes back to the queue — nothing is lost.
+    </div>
+
+    <label class="field"><span class="label">Internal note (optional)</span>
+      <input type="text" id="svNote" placeholder="e.g. Refund confirmed, player happy">
+    </label>
+
+    <div class="row" style="margin-top:6px">
+      <button class="btn btn--win grow" id="svGo">Mark solved</button>
+      <button class="btn btn--ghost" id="svX">Cancel</button>
+    </div>`);
+
+  $('#svX').addEventListener('click', closeModal);
+  $('#svGo').addEventListener('click', async (e) => {
+    const err = $('#svErr'); err.hidden = true;
+    try {
+      await busy(e.currentTarget, 'Closing…', () =>
+        rpcAuth('tuna_support_solve', { p_report: reportId, p_note: $('#svNote').value }));
+      closeModal();
+      toast('Conversation closed.', 'good');
+      openThread(reportId);
+      loadQueue(true);
+      loadStats();
     } catch (ex) { err.textContent = ex.message; err.hidden = false; }
   });
 }
@@ -428,16 +476,40 @@ async function loadTickets() {
       ${e.admin_note ? `<div class="ticket__reply"><b>Admin:</b> ${esc(e.admin_note)}</div>` : ''}
       <div class="ticket__foot">
         <span class="xs muted">raised ${esc(ago(e.created_at))} ago</span>
-        ${e.report_id ? `<button class="btn btn--ghost btn--xs" data-goto="${e.report_id}">Open chat</button>` : ''}
+        <span class="row" style="gap:6px">
+          ${e.status === 'open'
+            ? `<button class="btn btn--ghost btn--xs" data-wdraw="${e.id}">Withdraw</button>` : ''}
+          ${e.status === 'solved' && e.report_id
+            ? `<button class="btn btn--win btn--xs" data-close="${e.report_id}">Reply &amp; close</button>` : ''}
+          ${e.report_id ? `<button class="btn btn--ghost btn--xs" data-goto="${e.report_id}">Open chat</button>` : ''}
+        </span>
       </div>
     </div>`).join('') : empty('No tickets yet', 'Raise one from a conversation when you need an admin.');
+
+  loadStats();
+
+  $$('#queueList [data-wdraw]').forEach((b) => b.addEventListener('click', async () => {
+    const why = prompt('Why are you withdrawing this ticket?');
+    if (why === null) return;
+    try {
+      await busy(b, '…', () => rpcAuth('tuna_support_withdraw_ticket',
+        { p_id: Number(b.dataset.wdraw), p_reason: why }));
+      toast('Ticket withdrawn.');
+      loadTickets();
+    } catch (e) { toast(e.message, 'bad'); }
+  }));
+
+  $$('#queueList [data-close]').forEach((b) => b.addEventListener('click', () => {
+    view = 'queue';
+    $$('#nav button').forEach((x) => x.setAttribute('aria-current', x.dataset.v === 'queue' ? 'page' : 'false'));
+    loadQueue().then(() => openThread(Number(b.dataset.close)));
+  }));
 
   $$('#queueList [data-goto]').forEach((b) => b.addEventListener('click', () => {
     view = 'queue';
     $$('#nav button').forEach((x) => x.setAttribute('aria-current', x.dataset.v === 'queue' ? 'page' : 'false'));
     loadQueue().then(() => openThread(Number(b.dataset.goto)));
   }));
-  refresh(true);
 }
 
 /* ═══════════════════════════════════════════════════ canned replies ══ */

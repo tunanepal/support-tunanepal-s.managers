@@ -359,3 +359,8 @@ main#thread { display: flex; flex-direction: column; overflow: hidden; backgroun
   #nav { flex-direction: row; }
   .listpane { max-height: 42vh; }
 }
+
+/* solved conversations read as done at a glance */
+.ticket--withdrawn { border-left-color: var(--ink-3); opacity: .72; }
+.tag--withdrawn { background: var(--panel-2); color: var(--ink-3); }
+.btn--win { background: var(--win); color: #04150D; }
