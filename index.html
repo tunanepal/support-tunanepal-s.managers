@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tunanepal — Support Desk</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="./favicon.ico" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Khand:wght@500;600;700&family=Mukta:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./support.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════ sign in ══ -->
+<section id="login" hidden>
+  <div class="box">
+    <h1 class="wordmark">TUNA<em>NEPAL</em></h1>
+    <p class="eyebrow">Support desk</p>
+    <div class="alert alert--bad" id="loginErr" hidden></div>
+    <form id="loginForm" novalidate>
+      <label class="field"><span class="label">Support ID</span>
+        <input type="text" id="agentId" class="mono" autocomplete="username" placeholder="SUP001"></label>
+      <label class="field"><span class="label">Password</span>
+        <input type="password" id="agentPass" autocomplete="current-password" placeholder="••••••••"></label>
+      <button class="btn btn--wide" type="submit" id="loginBtn">Sign in</button>
+    </form>
+    <p class="xs muted" style="margin-top:14px">
+      Your ID is issued by an admin. If you cannot sign in, ask them to check
+      your account is switched on.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ desk ══ -->
+<div id="desk" hidden>
+
+  <aside>
+    <h1 class="wordmark">TUNA<em>NEPAL</em></h1>
+    <p class="eyebrow">Support desk</p>
+
+    <div class="agentcard">
+      <b id="agentName">—</b>
+      <span class="mono xs" id="agentTag"></span>
+    </div>
+
+    <nav id="nav">
+      <button data-v="queue" aria-current="page">Conversations<span class="count" id="navQueueCount" hidden>0</span></button>
+      <button data-v="tickets" aria-current="false">Tickets<span class="count" id="navTicketCount" hidden>0</span></button>
+      <button data-v="canned" aria-current="false">Canned replies</button>
+    </nav>
+
+    <div class="statgrid">
+      <div class="stat"><span class="stat__v" id="statOpen">0</span><small>Open</small></div>
+      <div class="stat"><span class="stat__v" id="statMine">0</span><small>Mine</small></div>
+      <div class="stat"><span class="stat__v" id="statPending">0</span><small>Pending</small></div>
+      <div class="stat"><span class="stat__v" id="statSolved">0</span><small>Solved today</small></div>
+      <div class="stat stat--wide"><span class="stat__v" id="statWait">—</span><small>Longest wait</small></div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <button class="themetoggle" id="themeBtn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2M12 19.4v2M21.4 12h-2M5 12H3M18.4 5.6l-1.4 1.4M7 17l-1.4 1.4M18.4 18.4 17 17M7 7 5.6 5.6"/>
+      </svg><span id="themeLabel">Dark</span>
+    </button>
+    <div class="row" style="margin-top:8px">
+      <button class="btn btn--ghost btn--xs grow" id="pwBtn">Password</button>
+      <button class="btn btn--ghost btn--xs grow" id="logoutBtn">Sign out</button>
+    </div>
+  </aside>
+
+  <section class="listpane">
+    <div class="listpane__head">
+      <h2 id="panelTitle">Conversations</h2>
+    </div>
+
+    <div id="queueTools">
+      <input type="search" id="qSearch" placeholder="Search name or phone…">
+      <div class="filterbar" id="qFilter">
+        <button data-f="open" aria-pressed="true">Open</button>
+        <button data-f="pending" aria-pressed="false">Pending</button>
+        <button data-f="solved" aria-pressed="false">Solved</button>
+        <button data-f="all" aria-pressed="false">All</button>
+      </div>
+      <button class="minebtn" id="qMine" aria-pressed="false">Only mine</button>
+    </div>
+
+    <div id="queueList"></div>
+  </section>
+
+  <main id="thread">
+    <div class="empty">
+      <div class="display">Pick a conversation</div>
+      <p>Choose someone on the left to see their messages and account.</p>
+    </div>
+  </main>
+</div>
+
+<script type="module" src="./support-main.js"></script>
+</body>
+</html>
