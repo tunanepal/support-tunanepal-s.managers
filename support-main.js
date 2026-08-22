@@ -332,6 +332,8 @@ async function openThread(id) {
 }
 
 function bubble(m) {
+  if (m.sender === 'system') return `
+    <div class="sysline">${esc(m.body)}<time>${esc(when(m.created_at))}</time></div>`;
   if (m.sender === 'note') return `
     <div class="note">
       <b>Internal · ${esc(m.author || 'staff')}</b>

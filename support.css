@@ -364,3 +364,16 @@ main#thread { display: flex; flex-direction: column; overflow: hidden; backgroun
 .ticket--withdrawn { border-left-color: var(--ink-3); opacity: .72; }
 .tag--withdrawn { background: var(--panel-2); color: var(--ink-3); }
 .btn--win { background: var(--win); color: #04150D; }
+
+/* the app's own closing line, shown to agents too */
+.sysline {
+  text-align: center;
+  margin: 12px auto;
+  padding: 8px 12px;
+  max-width: 80%;
+  border-radius: var(--r-sm);
+  background: var(--win-sk);
+  color: var(--win);
+  font-size: 12px;
+}
+.sysline time { display: block; margin-top: 3px; font-size: 10px; opacity: .7; }
