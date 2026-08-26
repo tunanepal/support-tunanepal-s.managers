@@ -16,8 +16,8 @@
 <!-- ═══════════════════════════════════════════════════════ sign in ══ -->
 <div class="bootfail" id="bootfail" hidden>
   <b>The panel could not start</b>
-  <p>support-main.js did not load. Check the file is uploaded with that exact
-     name, next to index.html, with no "(1)" in it.</p>
+  <p id="bootmsg">Checking which file is missing…</p>
+  <ul class="bootlist" id="bootlist"></ul>
 </div>
 
 <section id="login">
@@ -109,14 +109,44 @@
 
 <script type="module" src="./support-main.js"></script>
 <script>
-  /* If the module fails to load — wrong filename, bad upload, blocked file —
-     say so on screen rather than leaving a blank page. */
-  window.addEventListener('load', function () {
-    if (!window.__tunaBooted) {
-      var el = document.getElementById('bootfail');
-      if (el) el.hidden = false;
-    }
+/* If the module never ran, work out why and say so plainly. The panel is four
+   files that must sit beside each other; this checks each one and names the
+   ones the server cannot find. */
+window.addEventListener('load', function () {
+  if (window.__tunaBooted) return;
+
+  var box  = document.getElementById('bootfail');
+  var msg  = document.getElementById('bootmsg');
+  var list = document.getElementById('bootlist');
+  if (!box) return;
+  box.hidden = false;
+
+  var files = ['support-main.js', 'support-api.js', 'support-ui.js', 'support.css'];
+  var missing = [];
+  var done = 0;
+
+  files.forEach(function (f) {
+    fetch('./' + f, { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) missing.push(f + ' — not found (' + r.status + ')'); })
+      .catch(function () { missing.push(f + ' — could not be fetched'); })
+      .then(function () {
+        done++;
+        if (done < files.length) return;
+
+        list.innerHTML = files.map(function (f) {
+          var bad = missing.some(function (m) { return m.indexOf(f) === 0; });
+          return '<li class="' + (bad ? 'bad' : 'ok') + '">' +
+                 (bad ? '\u2715 ' : '\u2713 ') + f + '</li>';
+        }).join('');
+
+        msg.textContent = missing.length
+          ? 'These files are missing from the server. Upload them next to index.html, ' +
+            'with those exact names and no "(1)" in them.'
+          : 'All four files are present, so one of them has an error inside it. ' +
+            'Press F12, open the Console tab and reload — the red line names the file and line.';
+      });
   });
+});
 </script>
 </body>
 </html>

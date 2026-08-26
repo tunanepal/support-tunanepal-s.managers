@@ -446,3 +446,11 @@ main#thread { display: flex; flex-direction: column; overflow: hidden; backgroun
   margin-bottom: 4px;
 }
 .bootfail p { color: var(--ink-2); }
+
+.bootlist { list-style: none; margin: 12px 0 0; padding: 0; }
+.bootlist li {
+  font-family: var(--mono); font-size: 12.5px;
+  padding: 3px 0;
+}
+.bootlist li.ok  { color: var(--win); }
+.bootlist li.bad { color: var(--crimson); font-weight: 600; }
