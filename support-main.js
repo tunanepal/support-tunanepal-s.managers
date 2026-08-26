@@ -18,7 +18,7 @@ let canned = [];
 let pollTimer = null;
 
 /* ═══════════════════════════════════════════════════════════ sign in ══ */
-$('#loginForm').addEventListener('submit', async (e) => {
+$('#loginForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const err = $('#loginErr');
   err.hidden = true;
@@ -50,10 +50,10 @@ function signOut() {
   clearInterval(pollTimer);
   location.reload();
 }
-$('#logoutBtn').addEventListener('click', signOut);
+$('#logoutBtn')?.addEventListener('click', signOut);
 
 /* ══════════════════════════════════════════════════════════ chrome ══ */
-$('#nav').addEventListener('click', (e) => {
+$('#nav')?.addEventListener('click', (e) => {
   const b = e.target.closest('button[data-v]');
   if (!b) return;
   view = b.dataset.v;
@@ -61,13 +61,13 @@ $('#nav').addEventListener('click', (e) => {
   refresh();
 });
 
-$('#themeBtn').addEventListener('click', () => {
+$('#themeBtn')?.addEventListener('click', () => {
   const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
   applyTheme(next);
   $('#themeLabel').textContent = next === 'dark' ? 'Dark' : 'Light';
 });
 
-$('#pwBtn').addEventListener('click', () => {
+$('#pwBtn')?.addEventListener('click', () => {
   openModal(`
     <h2>Change password</h2>
     <p class="sub">You will stay signed in here, other devices are logged out.</p>
@@ -128,7 +128,7 @@ function paintStats(s) {
 }
 
 /* ═══════════════════════════════════════════════════════════ queue ══ */
-$('#qFilter').addEventListener('click', (e) => {
+$('#qFilter')?.addEventListener('click', (e) => {
   const b = e.target.closest('button[data-f]');
   if (!b) return;
   filter = b.dataset.f;
@@ -140,7 +140,7 @@ function syncFilter() {
   $$('#qFilter button').forEach((x) =>
     x.setAttribute('aria-pressed', String(x.dataset.f === filter)));
 }
-$('#qSearch').addEventListener('input', debounce(() => { search = $('#qSearch').value; loadQueue(); }, 300));
+$('#qSearch')?.addEventListener('input', debounce(() => { search = $('#qSearch').value; loadQueue(); }, 300));
 
 async function loadQueue(quiet = false) {
   $('#panelTitle').textContent = 'Conversations';
@@ -634,8 +634,21 @@ function debounce(fn, ms) {
 }
 
 (async function start() {
-  $('#themeLabel').textContent = savedTheme() === 'dark' ? 'Dark' : 'Light';
-  if (!getToken()) { $('#login').hidden = false; return; }
-  try { await rpcAuth('tuna_support_stats'); await enter(); }
-  catch { clearToken(); $('#login').hidden = false; }
+  const label = $('#themeLabel');
+  if (label) label.textContent = savedTheme() === 'dark' ? 'Dark' : 'Light';
+
+  const showLogin = () => { const l = $('#login'); if (l) l.hidden = false; };
+
+  try {
+    if (!getToken()) return showLogin();
+    await rpcAuth('tuna_support_stats');
+    await enter();
+  } catch (e) {
+    /* Whatever went wrong, never leave the agent staring at a blank page. */
+    clearToken();
+    showLogin();
+    if (!/session|sign in/i.test(e?.message || '')) {
+      toast(e?.message || 'Could not start. Reload the page.', 'bad');
+    }
+  }
 })();
