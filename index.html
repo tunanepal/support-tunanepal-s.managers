@@ -51,11 +51,9 @@
     </nav>
 
     <div class="statgrid">
-      <div class="stat"><span class="stat__v" id="statOpen">0</span><small>Open</small></div>
-      <div class="stat"><span class="stat__v" id="statMine">0</span><small>Mine</small></div>
-      <div class="stat"><span class="stat__v" id="statPending">0</span><small>Pending</small></div>
-      <div class="stat"><span class="stat__v" id="statSolved">0</span><small>Solved today</small></div>
-      <div class="stat stat--wide"><span class="stat__v" id="statWait">—</span><small>Longest wait</small></div>
+      <div class="stat"><span class="stat__v" id="statOpen">0</span><small>Waiting</small></div>
+      <div class="stat"><span class="stat__v" id="statPending">0</span><small>Yours</small></div>
+      <div class="stat stat--wide"><span class="stat__v" id="statSolved">0</span><small>Solved today</small></div>
     </div>
 
     <div class="spacer"></div>
@@ -82,9 +80,7 @@
         <button data-f="open" aria-pressed="true">Open</button>
         <button data-f="pending" aria-pressed="false">Pending</button>
         <button data-f="solved" aria-pressed="false">Solved</button>
-        <button data-f="all" aria-pressed="false">All</button>
       </div>
-      <button class="minebtn" id="qMine" aria-pressed="false">Only mine</button>
     </div>
 
     <div id="queueList"></div>

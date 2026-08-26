@@ -5,14 +5,13 @@
 import { rpc, rpcAuth, upload, getToken, setToken, clearToken, getAgent, setAgent } from './support-api.js';
 import {
   $, $$, esc, money, when, ago, avatar, toast, busy, openModal, closeModal,
-  empty, skeleton, applyTheme, savedTheme, PRIORITIES, CATEGORIES, ESC_CATEGORIES
+  empty, skeleton, applyTheme, savedTheme, CATEGORIES, ESC_CATEGORIES
 } from './support-ui.js';
 
 applyTheme(savedTheme());
 
 let view = 'queue';            // queue | tickets | canned
-let filter = 'open';
-let mine = false;
+let filter = 'open';           // open (unclaimed) | pending (mine) | solved (mine)
 let search = '';
 let openReport = null;
 let canned = [];
@@ -113,12 +112,9 @@ async function refresh(quiet = false) {
 
 function paintStats(s) {
   $('#statOpen').textContent = s.open;
-  $('#statMine').textContent = s.mine;
   $('#statPending').textContent = s.pending;
   $('#statSolved').textContent = s.solved_today;
-  const wait = Number(s.waiting_longest || 0);
-  $('#statWait').textContent = wait < 60 ? `${wait}m` : `${Math.round(wait / 60)}h`;
-  $('#statWait').className = wait > 60 ? 'stat__v stat__v--bad' : 'stat__v';
+  $('#statOpen').className = s.open > 0 ? 'stat__v stat__v--bad' : 'stat__v';
 
   const badge = (sel, n) => {
     const el = $(sel);
@@ -136,14 +132,14 @@ $('#qFilter').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-f]');
   if (!b) return;
   filter = b.dataset.f;
-  $$('#qFilter button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.f === filter)));
+  syncFilter();
   loadQueue();
 });
-$('#qMine').addEventListener('click', () => {
-  mine = !mine;
-  $('#qMine').setAttribute('aria-pressed', String(mine));
-  loadQueue();
-});
+
+function syncFilter() {
+  $$('#qFilter button').forEach((x) =>
+    x.setAttribute('aria-pressed', String(x.dataset.f === filter)));
+}
 $('#qSearch').addEventListener('input', debounce(() => { search = $('#qSearch').value; loadQueue(); }, 300));
 
 async function loadQueue(quiet = false) {
@@ -152,22 +148,45 @@ async function loadQueue(quiet = false) {
   const list = $('#queueList');
   if (!quiet && !list.children.length) list.innerHTML = skeleton(66, 4);
   let rows = [];
-  try { rows = await rpcAuth('tuna_support_queue', { p_status: filter, p_mine: mine, p_q: search }) || []; }
+  try { rows = await rpcAuth('tuna_support_queue', { p_status: filter, p_q: search }) || []; }
   catch (e) { list.innerHTML = `<div class="alert alert--bad">${esc(e.message)}</div>`; return; }
 
+  const blank = {
+    open:    ['Nothing waiting', 'New messages from players appear here to be claimed.'],
+    pending: ['No open chats', 'Claim something from the Open tab to start.'],
+    solved:  ['Nothing solved yet', 'Chats you close appear here.']
+  }[filter] || ['Nothing here', ''];
+
   list.innerHTML = rows.length ? rows.map(queueRow).join('')
-    : empty('Nothing waiting', 'New messages from players land here.');
+    : empty(blank[0], blank[1]);
 
   $$('#queueList [data-open]').forEach((el) =>
     el.addEventListener('click', () => openThread(Number(el.dataset.open))));
+
+  /* an unclaimed chat cannot be read until it is picked up */
+  $$('#queueList [data-claim]').forEach((b) => b.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    try {
+      await busy(b, 'Claiming…', () =>
+        rpcAuth('tuna_support_claim', { p_report: Number(b.dataset.claim) }));
+      filter = 'pending';
+      syncFilter();
+      await loadQueue();
+      openThread(Number(b.dataset.claim));
+      loadStats();
+      toast('Chat is yours. It has moved to Pending.', 'good');
+    } catch (ex) { toast(ex.message, 'bad'); loadQueue(); }
+  }));
 
   if (openReport && rows.some((r) => r.id === openReport)) markActive(openReport);
 }
 
 function queueRow(r) {
   const waitingOnUs = r.last_sender === 'player';
+  const unclaimed = !r.assigned_to;
   return `
-  <button class="qrow ${r.id === openReport ? 'qrow--on' : ''}" data-open="${r.id}">
+  <div class="qrow ${r.id === openReport ? 'qrow--on' : ''} ${unclaimed ? 'qrow--new' : ''}"
+       ${unclaimed ? '' : `data-open="${r.id}"`} ${unclaimed ? '' : 'role="button" tabindex="0"'}>
     ${avatar(r)}
     <span class="qrow__body">
       <span class="qrow__top">
@@ -176,15 +195,16 @@ function queueRow(r) {
       </span>
       <span class="qrow__msg">${esc(r.last_message || 'No messages yet')}</span>
       <span class="qrow__tags">
-        <span class="tag tag--${esc(r.priority)}">${esc(r.priority)}</span>
-        <span class="tag">${esc(r.category)}</span>
         ${r.open_escalations > 0 ? '<span class="tag tag--esc">ticket open</span>' : ''}
         ${r.blocked ? '<span class="tag tag--bad">blocked</span>' : ''}
-        ${waitingOnUs ? '<span class="tag tag--wait">needs reply</span>' : ''}
-        ${r.assigned_to ? `<span class="tag">@${esc(r.assigned_to)}</span>` : '<span class="tag tag--free">unassigned</span>'}
+        ${waitingOnUs && !unclaimed ? '<span class="tag tag--wait">needs reply</span>' : ''}
+        ${r.messages > 1 ? `<span class="tag">${r.messages} messages</span>` : ''}
       </span>
     </span>
-  </button>`;
+    ${unclaimed
+      ? `<button class="btn btn--xs qrow__claim" data-claim="${r.id}">Claim</button>`
+      : ''}
+  </div>`;
 }
 
 function markActive(id) {
@@ -218,18 +238,14 @@ async function openThread(id) {
       </div>
 
       <div class="tcontrols">
-        <select id="tStatus">${['open','pending','solved','closed'].map((s) =>
-          `<option ${r.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select>
-        <select id="tPriority">${PRIORITIES.map((s) =>
-          `<option ${r.priority === s ? 'selected' : ''}>${s}</option>`).join('')}</select>
-        <select id="tCategory">${CATEGORIES.map((s) =>
-          `<option ${r.category === s ? 'selected' : ''}>${s}</option>`).join('')}</select>
-        <button class="btn btn--xs" id="tClaim">${r.assigned_to ? 'Unassign' : 'Assign to me'}</button>
-        <button class="btn btn--gold btn--xs" id="tEsc">Raise ticket</button>
-        <button class="btn btn--win btn--xs" id="tSolve"
-          ${r.status === 'solved' || r.status === 'closed' ? 'disabled' : ''}>
-          ${r.status === 'solved' || r.status === 'closed' ? 'Already solved' : 'Mark solved'}
-        </button>
+        <select id="tCategory" title="What this is about">${CATEGORIES.map((c) =>
+          `<option ${r.category === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
+        ${r.status === 'solved' || r.status === 'closed' ? `
+          <span class="donetag">Closed</span>`
+        : `
+          <button class="btn btn--gold btn--xs" id="tEsc">Raise ticket</button>
+          <button class="btn btn--win btn--xs" id="tSolve">Mark solved</button>
+          <button class="btn btn--ghost btn--xs" id="tRelease">Release</button>`}
       </div>
     </div>
 
@@ -269,6 +285,71 @@ async function openThread(id) {
       ${d.messages.map(bubble).join('')}
     </div>
 
+    ${r.status === 'solved' || r.status === 'closed' ? `
+    <div class="composer composer--done">
+      <p>This chat is solved and closed for the player.
+         Replying reopens it and puts it back in your Pending list.</p>
+      <button class="btn btn--ghost btn--xs" id="tReopen">Reply anyway</button>
+    </div>` : `
+    <div class="composer">
+      <div class="composer__tools">
+        <select id="cannedPick">
+          <option value="">Canned reply…</option>
+          ${canned.map((c) => `<option value="${c.id}">${esc(c.title)}</option>`).join('')}
+        </select>
+        <label class="filepick filepick--sm">
+          <input type="file" id="cFile" accept="image/jpeg,image/png,image/webp">
+          <span id="cFileLabel">Attach</span>
+        </label>
+        <label class="notetoggle">
+          <input type="checkbox" id="cNote">
+          <span>Internal note</span>
+        </label>
+      </div>
+      <textarea id="cBody" rows="3" placeholder="Write a reply to the player…"></textarea>
+      <button class="btn" id="cSend">Send reply</button>
+    </div>`}`;
+
+  $('#chat').scrollTop = $('#chat').scrollHeight;
+
+  $('#ctxToggle').addEventListener('click', () => {
+    const c = $('#ctxCard');
+    c.hidden = !c.hidden;
+    $('#ctxToggle').textContent = c.hidden ? 'Player info' : 'Hide info';
+  });
+
+  const set = (args) => rpcAuth('tuna_support_update', { p_report: id, ...args })
+    .then(() => { toast('Updated.'); loadQueue(true); })
+    .catch((e) => toast(e.message, 'bad'));
+
+  $('#tCategory')?.addEventListener('change', (e) => set({ p_category: e.target.value }));
+
+  /* hand a chat back if it was picked up by mistake */
+  $('#tRelease')?.addEventListener('click', async (e) => {
+    try {
+      await busy(e.currentTarget, 'Releasing…', () =>
+        rpcAuth('tuna_support_release', { p_report: id }));
+      openReport = null;
+      $('#thread').innerHTML = `<div class="empty">
+        <div class="display">Released</div><p>The chat is back in the Open queue.</p></div>`;
+      filter = 'open'; syncFilter(); loadQueue(); loadStats();
+      toast('Released back to the queue.');
+    } catch (ex) { toast(ex.message, 'bad'); }
+  });
+  $('#tEsc')?.addEventListener('click', () => escalateModal(id, p));
+  $('#tSolve')?.addEventListener('click', () => solveModal(id, p));
+
+  $('#tReopen')?.addEventListener('click', () => {
+    $('.composer--done').outerHTML = liveComposer();
+    wireComposer(id);
+  });
+
+  if (!$('#cSend')) return;
+  wireComposer(id);
+}
+
+function liveComposer() {
+  return `
     <div class="composer">
       <div class="composer__tools">
         <select id="cannedPick">
@@ -287,27 +368,9 @@ async function openThread(id) {
       <textarea id="cBody" rows="3" placeholder="Write a reply to the player…"></textarea>
       <button class="btn" id="cSend">Send reply</button>
     </div>`;
+}
 
-  $('#chat').scrollTop = $('#chat').scrollHeight;
-
-  $('#ctxToggle').addEventListener('click', () => {
-    const c = $('#ctxCard');
-    c.hidden = !c.hidden;
-    $('#ctxToggle').textContent = c.hidden ? 'Player info' : 'Hide info';
-  });
-
-  const set = (args) => rpcAuth('tuna_support_update', { p_report: id, ...args })
-    .then(() => { toast('Updated.'); loadQueue(true); })
-    .catch((e) => toast(e.message, 'bad'));
-
-  $('#tStatus').addEventListener('change', (e) => set({ p_status: e.target.value }));
-  $('#tPriority').addEventListener('change', (e) => set({ p_priority: e.target.value }));
-  $('#tCategory').addEventListener('change', (e) => set({ p_category: e.target.value }));
-  $('#tClaim').addEventListener('click', () =>
-    set({ p_assign: r.assigned_to ? 'none' : 'me' }).then(() => openThread(id)));
-  $('#tEsc').addEventListener('click', () => escalateModal(id, p));
-  $('#tSolve').addEventListener('click', () => solveModal(id, p));
-
+function wireComposer(id) {
   $('#cannedPick').addEventListener('change', (e) => {
     const c = canned.find((x) => String(x.id) === e.target.value);
     if (c) { $('#cBody').value = c.body; $('#cBody').focus(); }

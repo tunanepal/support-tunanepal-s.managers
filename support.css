@@ -377,3 +377,53 @@ main#thread { display: flex; flex-direction: column; overflow: hidden; backgroun
   font-size: 12px;
 }
 .sysline time { display: block; margin-top: 3px; font-size: 10px; opacity: .7; }
+
+/* ══════════════════════════════════════════ claim-first queue polish ═════ */
+.qrow { align-items: center; transition: border-color .14s, background .14s, transform .1s; }
+.qrow[role="button"] { cursor: pointer; }
+.qrow[role="button"]:active { transform: scale(.995); }
+
+/* an unclaimed chat is not readable yet, so it reads as an offer, not a row */
+.qrow--new {
+  border-left: 3px solid var(--marigold);
+  background: linear-gradient(90deg, var(--marigold-sk), var(--panel) 40%);
+  cursor: default;
+}
+.qrow--new .qrow__msg { color: var(--ink-3); }
+.qrow__claim { flex-shrink: 0; align-self: center; }
+
+/* the composer, once a chat is closed */
+.composer--done {
+  padding: 14px 18px 18px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  text-align: center;
+}
+.composer--done p {
+  font-size: 12.5px; color: var(--ink-3);
+  max-width: 44ch; margin: 0 auto 10px;
+}
+
+/* smoother panes: content fades in rather than snapping */
+#thread > * { animation: fadeUp .18s ease both; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(4px); } }
+#queueList .qrow { animation: fadeUp .16s ease both; }
+
+/* the chat scrolls on its own, so keep the scrollbar quiet */
+.chat::-webkit-scrollbar, #queueList::-webkit-scrollbar { width: 8px; }
+.chat::-webkit-scrollbar-thumb, #queueList::-webkit-scrollbar-thumb {
+  background: var(--line); border-radius: 4px;
+}
+.chat::-webkit-scrollbar-track, #queueList::-webkit-scrollbar-track { background: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  #thread > *, #queueList .qrow { animation: none; }
+}
+
+/* a closed chat offers no actions, just a plain label */
+.donetag {
+  padding: 4px 11px; border-radius: 20px;
+  background: var(--win-sk); color: var(--win);
+  font-family: var(--display); font-size: 12.5px; font-weight: 600;
+  letter-spacing: .07em; text-transform: uppercase;
+}
