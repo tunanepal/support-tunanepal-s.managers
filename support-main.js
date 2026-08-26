@@ -9,7 +9,12 @@ import {
 } from './support-ui.js';
 
 applyTheme(savedTheme());
+
+/* The module is running, so the "could not start" banner is wrong by
+   definition. Remove it outright rather than relying on a flag the checker
+   might read before this line lands. */
 window.__tunaBooted = true;
+document.getElementById('bootfail')?.remove();
 
 let view = 'queue';            // queue | tickets | canned
 let filter = 'open';           // open (unclaimed) | pending (mine) | solved (mine)

@@ -113,6 +113,11 @@
    files that must sit beside each other; this checks each one and names the
    ones the server cannot find. */
 window.addEventListener('load', function () {
+  /* Wait a beat: on a slow connection the module may still be settling. */
+  setTimeout(check, 400);
+});
+
+function check() {
   if (window.__tunaBooted) return;
 
   var box  = document.getElementById('bootfail');
@@ -146,7 +151,7 @@ window.addEventListener('load', function () {
             'Press F12, open the Console tab and reload — the red line names the file and line.';
       });
   });
-});
+}
 </script>
 </body>
 </html>
