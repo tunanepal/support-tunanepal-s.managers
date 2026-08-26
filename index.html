@@ -14,7 +14,13 @@
 <body>
 
 <!-- ═══════════════════════════════════════════════════════ sign in ══ -->
-<section id="login" hidden>
+<div class="bootfail" id="bootfail" hidden>
+  <b>The panel could not start</b>
+  <p>support-main.js did not load. Check the file is uploaded with that exact
+     name, next to index.html, with no "(1)" in it.</p>
+</div>
+
+<section id="login">
   <div class="box">
     <h1 class="wordmark">TUNA<em>NEPAL</em></h1>
     <p class="eyebrow">Support desk</p>
@@ -94,6 +100,23 @@
   </main>
 </div>
 
+<noscript>
+  <div class="bootfail">
+    <b>JavaScript is switched off</b>
+    <p>The support desk needs it. Turn it on in your browser settings and reload.</p>
+  </div>
+</noscript>
+
 <script type="module" src="./support-main.js"></script>
+<script>
+  /* If the module fails to load — wrong filename, bad upload, blocked file —
+     say so on screen rather than leaving a blank page. */
+  window.addEventListener('load', function () {
+    if (!window.__tunaBooted) {
+      var el = document.getElementById('bootfail');
+      if (el) el.hidden = false;
+    }
+  });
+</script>
 </body>
 </html>

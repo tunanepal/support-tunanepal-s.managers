@@ -9,6 +9,7 @@ import {
 } from './support-ui.js';
 
 applyTheme(savedTheme());
+window.__tunaBooted = true;
 
 let view = 'queue';            // queue | tickets | canned
 let filter = 'open';           // open (unclaimed) | pending (mine) | solved (mine)
@@ -32,8 +33,8 @@ $('#loginForm')?.addEventListener('submit', async (e) => {
 });
 
 async function enter() {
-  $('#login').hidden = true;
-  $('#desk').hidden = false;
+  const l = $('#login'); if (l) l.hidden = true;
+  const dk = $('#desk'); if (dk) dk.hidden = false;
   const a = getAgent();
   $('#agentName').textContent = a?.name || '—';
   $('#agentTag').textContent = a?.id || '';
