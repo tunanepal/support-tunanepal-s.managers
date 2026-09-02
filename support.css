@@ -454,3 +454,92 @@ main#thread { display: flex; flex-direction: column; overflow: hidden; backgroun
 }
 .bootlist li.ok  { color: var(--win); }
 .bootlist li.bad { color: var(--crimson); font-weight: 600; }
+
+/* ═══════════════════════════════════════ chat takes over on a phone ═════
+   Wide screens keep list and chat side by side. Narrow ones behave like a
+   messaging app: the list is the screen until you tap in, then the chat is,
+   and the back arrow returns you.                                        */
+.backbtn {
+  display: none;
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  align-items: center; justify-content: center;
+  border: 1px solid var(--line); border-radius: 50%;
+  background: var(--panel-2); color: var(--ink);
+  cursor: pointer;
+}
+.backbtn:hover { background: var(--panel); }
+
+@media (max-width: 900px) {
+  .backbtn { display: inline-flex; }
+  body.reading .listpane { display: none; }
+  body.reading aside { display: none; }
+  body.reading #desk { grid-template-rows: 1fr; }
+  body.reading main#thread { height: 100dvh; }
+}
+
+/* ══════════════════════════════════════════════════════ my work ════════ */
+.wcard {
+  padding: 14px;
+  margin-bottom: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+.wcard__head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.wcard__head h3 { font-size: 17px; }
+
+.today {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-sm);
+  background: var(--panel-2);
+  margin-bottom: 12px;
+}
+.today b { display: block; color: var(--ink); font-family: var(--display); font-size: 16px; }
+.today small { display: block; color: var(--ink-3); font-size: 12px; }
+.today--in   { border-style: solid; border-color: var(--win); background: var(--win-sk); }
+.today--done { border-style: solid; border-color: var(--line); }
+
+.wgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.wgrid--4 { grid-template-columns: repeat(4, 1fr); }
+.wgrid > div {
+  padding: 9px 10px;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r-sm);
+}
+.wgrid small {
+  display: block; font-size: 9.5px; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.wgrid b { font-family: var(--mono); font-size: 16px; color: var(--ink); }
+
+/* a month at a glance — filled squares are days worked */
+.calstrip { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 12px; }
+.calday {
+  width: 26px; height: 26px;
+  display: grid; place-items: center;
+  border-radius: 6px;
+  background: var(--panel-2); border: 1px solid var(--line);
+  font-family: var(--mono); font-size: 11px; color: var(--ink-3);
+}
+.calday--on { background: var(--win); border-color: var(--win); color: #04150D; font-weight: 600; }
+
+.money__row {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 9px 0; border-bottom: 1px solid var(--line-soft);
+  font-size: 13px;
+}
+.money__row:last-child { border-bottom: 0; }
+.money__row b { font-family: var(--mono); white-space: nowrap; }
+.money__row--total { border-top: 2px solid var(--line); margin-top: 4px; padding-top: 11px; }
+.money__row--total span { font-family: var(--display); font-size: 16px; color: var(--ink); }
+.money__row--total b { font-size: 19px; color: var(--ink); }
+.money__row .up { color: var(--win); }
+.money__row .down { color: var(--crimson); }
+
+.tag--approved { background: var(--win-sk); color: var(--win); }
+.tag--pending  { background: var(--marigold-sk); color: var(--marigold); }

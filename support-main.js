@@ -7,6 +7,7 @@ import {
   $, $$, esc, money, when, ago, avatar, toast, busy, openModal, closeModal,
   empty, skeleton, applyTheme, savedTheme, CATEGORIES, ESC_CATEGORIES
 } from './support-ui.js';
+import { showMyWork } from './support-work.js';
 
 applyTheme(savedTheme());
 
@@ -63,6 +64,7 @@ $('#nav')?.addEventListener('click', (e) => {
   const b = e.target.closest('button[data-v]');
   if (!b) return;
   view = b.dataset.v;
+  document.body.classList.remove('reading');
   $$('#nav button').forEach((x) => x.setAttribute('aria-current', x.dataset.v === view ? 'page' : 'false'));
   refresh();
 });
@@ -111,6 +113,7 @@ async function loadStats(quiet = true) {
 
 async function refresh(quiet = false) {
   await loadStats(quiet);
+  if (view === 'work') return showMyWork();
   if (view === 'queue') await loadQueue(quiet);
   if (view === 'tickets') await loadTickets();
   if (view === 'canned') paintCanned();
@@ -138,6 +141,7 @@ $('#qFilter')?.addEventListener('click', (e) => {
   const b = e.target.closest('button[data-f]');
   if (!b) return;
   filter = b.dataset.f;
+  document.body.classList.remove('reading');
   syncFilter();
   loadQueue();
 });
@@ -222,6 +226,7 @@ function markActive(id) {
 async function openThread(id) {
   openReport = id;
   markActive(id);
+  document.body.classList.add('reading');   // list slides away, chat fills
   const pane = $('#thread');
   pane.innerHTML = skeleton(120, 2);
 
@@ -235,6 +240,12 @@ async function openThread(id) {
   pane.innerHTML = `
     <div class="thead">
       <div class="row" style="gap:10px">
+        <button class="backbtn" id="tBack" aria-label="Back to list">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+               stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M15 5 8 12l7 7"/>
+          </svg>
+        </button>
         ${avatar(p, 'ava--lg')}
         <div class="grow">
           <b class="thead__name">${esc(p.name)}</b>
@@ -318,6 +329,8 @@ async function openThread(id) {
 
   $('#chat').scrollTop = $('#chat').scrollHeight;
 
+  $('#tBack')?.addEventListener('click', closeThread);
+
   $('#ctxToggle').addEventListener('click', () => {
     const c = $('#ctxCard');
     c.hidden = !c.hidden;
@@ -399,6 +412,24 @@ function wireComposer(id) {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) send($('#cSend'), id);
   });
 }
+
+function closeThread() {
+  document.body.classList.remove('reading');
+  openReport = null;
+  markActive(null);
+  const pane = $('#thread');
+  if (pane) pane.innerHTML = `
+    <div class="empty">
+      <div class="display">Pick a conversation</div>
+      <p>Choose someone on the left to see their messages and account.</p>
+    </div>`;
+}
+
+/* Escape and the phone's back gesture both close the chat first. */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.body.classList.contains('reading')
+      && !document.getElementById('modalScrim')) closeThread();
+});
 
 function bubble(m) {
   if (m.sender === 'system') return `
